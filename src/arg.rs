@@ -31,6 +31,19 @@ pub struct IfArg {
     pub path: String,
 }
 
+impl LevelArg {
+    pub fn ident(&self) -> syn::Ident {
+        let span = proc_macro2::Span::call_site();
+        match self {
+            LevelArg::Trace => syn::Ident::new("Trace", span),
+            LevelArg::Debug => syn::Ident::new("Debug", span),
+            LevelArg::Info => syn::Ident::new("Info", span),
+            LevelArg::Warn => syn::Ident::new("Warn", span),
+            LevelArg::Error => syn::Ident::new("Error", span),
+        }
+    }
+}
+
 macro_rules! unrecognized_item {
     ($item:expr) => {
         return Err(syn::Error::new_spanned($item, "Unrecognized attribute."));
