@@ -114,7 +114,18 @@ fn produce_log_stmt(config: &Config) -> TokenStream {
     let log_level = config.level.ident();
     let log_msg = &config.msg.msg;
 
-    quote! {
-        log::log!(log::Level::#log_level, #log_msg);
+    if log_msg.contains("{:?}") {
+        match config.typ {
+            arg::TypeArg::Post => {
+                quote! {
+                    log::log!(log::Level::#log_level, #log_msg, res);
+                }
+            }
+            _ => todo!("We haven't yet supported this format"),
+        }
+    } else {
+        quote! {
+            log::log!(log::Level::#log_level, #log_msg);
+        }
     }
 }

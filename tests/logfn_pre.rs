@@ -1,7 +1,12 @@
 use logfn::logfn;
 
 #[logfn(pre, msg = "execute add", level = "info")]
-#[logfn(post, msg = "executed add", level = "error", if = "Option::is_none")]
+#[logfn(
+    post,
+    msg = "failed to add: {:?}",
+    level = "error",
+    if = "Option::is_none"
+)]
 #[logfn(post, msg = "executed add", level = "info", if = "Option::is_some")]
 fn add(a: usize, b: usize) -> Option<usize> {
     a.checked_add(b)
