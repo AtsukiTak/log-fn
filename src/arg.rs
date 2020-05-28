@@ -28,7 +28,7 @@ pub struct MsgArg {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IfArg {
-    pub path: String,
+    pub path: syn::ExprPath,
 }
 
 impl LevelArg {
@@ -88,7 +88,9 @@ pub fn from_input(arg: syn::NestedMeta) -> syn::Result<Arg> {
             } else if path.is_ident("msg") {
                 Ok(Arg::Msg(MsgArg { msg: s.value() }))
             } else if path.is_ident("if") {
-                Ok(Arg::If(IfArg { path: s.value() }))
+                Ok(Arg::If(IfArg {
+                    path: syn::parse_str(&s.value())?,
+                }))
             } else {
                 unrecognized_item!(meta)
             }

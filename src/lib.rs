@@ -32,8 +32,6 @@ pub fn logfn(input_args: StdTokenStream, input: StdTokenStream) -> StdTokenStrea
 }
 
 fn produce_logfn(config: Config, input: syn::ItemFn) -> TokenStream {
-    println!("{:?}", input.attrs.len());
-
     match config.typ {
         arg::TypeArg::Pre => produce_logfn_pre(config, input),
         arg::TypeArg::Post => produce_lognf_post(config, input),
@@ -57,13 +55,12 @@ fn produce_logfn_pre(config: Config, input: syn::ItemFn) -> TokenStream {
     let sig = input.sig;
     let block = input.block;
 
-    let log_level = config.level.ident();
-    let log_msg = config.msg.msg;
+    let log_stmt = produce_log_stmt(&config);
 
     quote! {
         #(#attrs)*
         #vis #sig {
-            log::log!(log::Level::#log_level, #log_msg);
+            #log_stmt
 
             #block
         }
@@ -89,17 +86,35 @@ fn produce_lognf_post(config: Config, input: syn::ItemFn) -> TokenStream {
     let sig = input.sig;
     let block = input.block;
 
-    let log_level = config.level.ident();
-    let log_msg = config.msg.msg;
+    let log_stmt = produce_log_stmt(&config);
+
+    let cond_expr = config
+        .cond
+        .map(|cond| {
+            let path = cond.path;
+            quote! { #path(&res) }
+        })
+        .unwrap_or(quote! { true });
 
     quote! {
         #(#attrs)*
         #vis #sig {
             let res = #block;
 
-            log::log!(log::Level::#log_level, #log_msg);
+            if #cond_expr {
+                #log_stmt
+            }
 
             res
         }
+    }
+}
+
+fn produce_log_stmt(config: &Config) -> TokenStream {
+    let log_level = config.level.ident();
+    let log_msg = &config.msg.msg;
+
+    quote! {
+        log::log!(log::Level::#log_level, #log_msg);
     }
 }
