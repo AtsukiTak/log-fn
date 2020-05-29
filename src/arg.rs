@@ -1,3 +1,5 @@
+use syn::{Lit, Meta, MetaNameValue, NestedMeta};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Arg {
     Type(TypeArg),
@@ -55,46 +57,37 @@ pub fn from_input_vec(args: syn::AttributeArgs) -> syn::Result<Vec<Arg>> {
 }
 
 pub fn from_input(arg: syn::NestedMeta) -> syn::Result<Arg> {
-    let meta = match arg {
-        syn::NestedMeta::Meta(meta) => meta,
-        _ => unrecognized_item!(arg),
-    };
-
-    match meta.clone() {
-        syn::Meta::Path(path) => {
-            if path.is_ident("pre") {
-                Ok(Arg::Type(TypeArg::Pre))
-            } else if path.is_ident("post") {
-                Ok(Arg::Type(TypeArg::Post))
-            } else {
-                unrecognized_item!(path)
+    match arg {
+        NestedMeta::Meta(Meta::Path(path)) => {
+            let ident = match path.get_ident() {
+                Some(i) => i,
+                None => unrecognized_item!(path),
+            };
+            match ident {
+                i if i == "Pre" => Ok(Arg::Type(TypeArg::Pre)),
+                i if i == "Post" => Ok(Arg::Type(TypeArg::Post)),
+                i if i == "Trace" => Ok(Arg::Level(LevelArg::Trace)),
+                i if i == "Debug" => Ok(Arg::Level(LevelArg::Debug)),
+                i if i == "Info" => Ok(Arg::Level(LevelArg::Info)),
+                i if i == "Warn" => Ok(Arg::Level(LevelArg::Warn)),
+                i if i == "Error" => Ok(Arg::Level(LevelArg::Error)),
+                i => unrecognized_item!(i),
             }
         }
-        syn::Meta::NameValue(syn::MetaNameValue {
+        NestedMeta::Meta(Meta::NameValue(MetaNameValue {
             path,
             lit: syn::Lit::Str(s),
             ..
-        }) => {
-            if path.is_ident("level") {
-                let level = match s.value().as_str() {
-                    "trace" => LevelArg::Trace,
-                    "debug" => LevelArg::Debug,
-                    "info" => LevelArg::Info,
-                    "warn" => LevelArg::Warn,
-                    "error" => LevelArg::Error,
-                    _ => unrecognized_item!(s),
-                };
-                Ok(Arg::Level(level))
-            } else if path.is_ident("msg") {
-                Ok(Arg::Msg(MsgArg { msg: s.value() }))
-            } else if path.is_ident("if") {
+        })) => {
+            if path.is_ident("if") {
                 Ok(Arg::If(IfArg {
                     path: syn::parse_str(&s.value())?,
                 }))
             } else {
-                unrecognized_item!(meta)
+                unrecognized_item!(path)
             }
         }
-        _ => unrecognized_item!(meta),
+        NestedMeta::Lit(Lit::Str(s)) => Ok(Arg::Msg(MsgArg { msg: s.value() })),
+        _ => unrecognized_item!(arg),
     }
 }
