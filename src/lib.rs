@@ -124,8 +124,8 @@ mod arg;
 mod config;
 
 use proc_macro::TokenStream as StdTokenStream;
-use proc_macro2::{Span, TokenStream};
-use quote::{format_ident, quote, ToTokens};
+use proc_macro2::TokenStream;
+use quote::quote;
 
 use config::Config;
 
