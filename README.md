@@ -15,9 +15,9 @@ Each `logfn` attribute injects a single logging code. You can put as many `logfn
 ```rust
 # use logfn::logfn;
 # use std::num::ParseIntError;
-#[logfn(Pre, Debug, "\"atoi\" will be executed")]
-#[logfn(Post, Debug, "\"atoi\" is executed", if = "Result::is_ok")]
-#[logfn(Post, Error, "Error \"atoi\": {:?}", if = "Result::is_err")]
+#[logfn(Pre, Debug, "{fn} will be executed")]
+#[logfn(Post, Debug, "{fn} is executed", if = "Result::is_ok")]
+#[logfn(Post, Error, "Error {fn}: {ret:?}", if = "Result::is_err")]
 fn atoi(a: &str) -> Result<usize, ParseIntError> {
     usize::from_str_radix(a, 10)
 }
@@ -32,7 +32,7 @@ The following attribute injects logging code **before** function is called.
 ```rust
 use logfn::logfn;
 
-#[logfn(Pre, Info, "executing \"add\" function...")]
+#[logfn(Pre, Info, "executing {fn}...")]
 fn add(a: usize, b: usize) -> usize {
     a + b
 }
@@ -42,7 +42,7 @@ The resulting code will looks like
 
 ```rust
 fn add(a: usize, b: usize) -> usize {
-    log::info!("executing \"add\" function...");
+    log::info!("executing add...");
 
     {
         a + b
@@ -57,7 +57,7 @@ You also be able to inject logging code **after** function is called.
 ```rust
 use logfn::logfn;
 
-#[logfn(Post, Info, "executed \"add\" function!")]
+#[logfn(Post, Info, "executed {fn}!")]
 fn add(a: usize, b: usize) -> usize {
     a + b
 }
@@ -71,7 +71,7 @@ fn add(a: usize, b: usize) -> usize {
         a + b
     })();
 
-    log::info!("executed \"add\" function!");
+    log::info!("executed add!");
 
     res
 }
@@ -95,15 +95,18 @@ fn checked_add(a: usize, b: usize) -> Option<usize> {
 }
 ```
 
-## Log message
+## Message formatting
 
-You can put a single "{:?}" formatter on post logging. Returned value will be injected.
+We support below format patterns.
+
+- "{fn}" interpolates function name
+- "{ret:?}" or "{ret}" interpolates returned value
 
 ```rust
 # use std::num::ParseIntError;
 use logfn::logfn;
 
-#[logfn(Post, Error, "Error while \"atoi\" function: {:?}", if = "Result::is_err")]
+#[logfn(Post, Error, "Error while {fn}: {ret:?}", if = "Result::is_err")]
 fn atoi(s: &str) -> Result<usize, ParseIntError> {
     usize::from_str_radix(s, 10)
 }
@@ -116,7 +119,7 @@ Async function is also supported.
 ```rust
 use logfn::logfn;
 
-#[logfn(Post, Debug, "\"add_fut\" is executed")]
+#[logfn(Post, Debug, "{fn} is executed")]
 async fn add_fut(a: usize, b: usize) -> usize {
     a + b
 }

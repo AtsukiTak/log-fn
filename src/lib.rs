@@ -94,7 +94,7 @@
 //!
 //! # Message formatting
 //!
-//! We support below format variables
+//! We support below format patterns.
 //!
 //! - "{fn}" interpolates function name
 //! - "{ret:?}" or "{ret}" interpolates returned value
