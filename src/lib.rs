@@ -12,9 +12,9 @@
 //! ```
 //! # use logfn::logfn;
 //! # use std::num::ParseIntError;
-//! #[logfn(Pre, Debug, "\"atoi\" will be executed")]
-//! #[logfn(Post, Debug, "\"atoi\" is executed", if = "Result::is_ok")]
-//! #[logfn(Post, Error, "Error \"atoi\": {:?}", if = "Result::is_err")]
+//! #[logfn(Pre, Debug, "{fn} will be executed")]
+//! #[logfn(Post, Debug, "{fn} is executed", if = "Result::is_ok")]
+//! #[logfn(Post, Error, "Error while executing {fn}: {ret:?}", if = "Result::is_err")]
 //! fn atoi(a: &str) -> Result<usize, ParseIntError> {
 //!     usize::from_str_radix(a, 10)
 //! }
@@ -29,7 +29,7 @@
 //! ```
 //! use logfn::logfn;
 //!
-//! #[logfn(Pre, Info, "executing \"add\" function...")]
+//! #[logfn(Pre, Info, "executing {fn}...")]
 //! fn add(a: usize, b: usize) -> usize {
 //!     a + b
 //! }
@@ -39,7 +39,7 @@
 //!
 //! ```
 //! fn add(a: usize, b: usize) -> usize {
-//!     log::info!("executing \"add\" function...");
+//!     log::info!("executing add...");
 //!
 //!     {
 //!         a + b
@@ -54,7 +54,7 @@
 //! ```
 //! use logfn::logfn;
 //!
-//! #[logfn(Post, Info, "executed \"add\" function!")]
+//! #[logfn(Post, Info, "executed {fn}!")]
 //! fn add(a: usize, b: usize) -> usize {
 //!     a + b
 //! }
@@ -64,13 +64,13 @@
 //!
 //! ```
 //! fn add(a: usize, b: usize) -> usize {
-//!     let res = (move || {
+//!     let ret = (move || {
 //!         a + b
 //!     })();
 //!
-//!     log::info!("executed \"add\" function!");
+//!     log::info!("executed add!");
 //!
-//!     res
+//!     ret
 //! }
 //! ```
 //!
@@ -92,15 +92,20 @@
 //! }
 //! ```
 //!
-//! # Log message
+//! # Message formatting
 //!
-//! You can put a single "{:?}" formatter on post logging. Returned value will be injected.
+//! We support below format variables
+//!
+//! - "{fn}" interpolates function name
+//! - "{ret:?}" or "{ret}" interpolates returned value
+//!
+//! Note that "{ret}" pattern is only valid on Pre logging type.
 //!
 //! ```
 //! # use std::num::ParseIntError;
 //! use logfn::logfn;
 //!
-//! #[logfn(Post, Error, "Error while \"atoi\" function: {:?}", if = "Result::is_err")]
+//! #[logfn(Post, Error, "Error while {fn} function: {ret:?}", if = "Result::is_err")]
 //! fn atoi(s: &str) -> Result<usize, ParseIntError> {
 //!     usize::from_str_radix(s, 10)
 //! }
@@ -170,12 +175,12 @@ fn produce_logfn(config: Config, input: syn::ItemFn) -> TokenStream {
 // }
 // ```
 fn produce_logfn_pre(config: Config, input: syn::ItemFn) -> TokenStream {
-    let attrs = input.attrs;
-    let vis = input.vis;
-    let sig = input.sig;
-    let block = input.block;
+    let attrs = &input.attrs;
+    let vis = &input.vis;
+    let sig = &input.sig;
+    let block = &input.block;
 
-    let log_stmt = produce_log_stmt(&config);
+    let log_stmt = produce_log_stmt(&config, &input);
 
     quote! {
         #(#attrs)*
@@ -194,11 +199,11 @@ fn produce_logfn_pre(config: Config, input: syn::ItemFn) -> TokenStream {
 //     fn __logfn_inner(a: usize, b: usize) -> usize {
 //         a + b
 //     }
-//     let res = __logfn_inner();
+//     let ret = __logfn_inner();
 //
 //     log::log!(log::Level::Info, "hoge");
 //
-//     res
+//     ret
 // }
 // ```
 fn produce_logfn_post(config: Config, input: syn::ItemFn) -> TokenStream {
@@ -208,26 +213,26 @@ fn produce_logfn_post(config: Config, input: syn::ItemFn) -> TokenStream {
 
     let closure_call = produce_closure_call(&input);
 
-    let log_stmt = produce_log_stmt(&config);
+    let log_stmt = produce_log_stmt(&config, &input);
 
     let cond_expr = config
         .cond
         .map(|cond| {
             let path = cond.path;
-            quote! { #path(&res) }
+            quote! { #path(&ret) }
         })
         .unwrap_or(quote! { true });
 
     quote! {
         #(#attrs)*
         #vis #sig {
-            let res = #closure_call;
+            let ret = #closure_call;
 
             if #cond_expr {
                 #log_stmt
             }
 
-            res
+            ret
         }
     }
 }
@@ -246,22 +251,20 @@ fn produce_closure_call(input: &syn::ItemFn) -> TokenStream {
     }
 }
 
-fn produce_log_stmt(config: &Config) -> TokenStream {
+fn produce_log_stmt(config: &Config, input: &syn::ItemFn) -> TokenStream {
     let log_level = config.level.ident();
     let log_msg = &config.msg.msg;
 
-    if log_msg.contains("{:?}") {
-        match config.typ {
-            arg::TypeArg::Post => {
-                quote! {
-                    log::log!(log::Level::#log_level, #log_msg, res);
-                }
-            }
-            _ => todo!("We haven't yet supported this format"),
-        }
-    } else {
-        quote! {
-            log::log!(log::Level::#log_level, #log_msg);
-        }
+    let mut args = vec![];
+    if log_msg.contains("{ret:?}") || log_msg.contains("{ret}") {
+        args.push(quote! { ret = ret });
+    }
+    if log_msg.contains("{fn}") {
+        let fn_name = input.sig.ident.clone().to_string();
+        args.push(quote! { fn = #fn_name });
+    }
+
+    quote! {
+        log::log!(log::Level::#log_level, #log_msg #(, #args)*);
     }
 }
