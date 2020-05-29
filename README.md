@@ -12,7 +12,7 @@ And we have a plan to add `Time logging` type.
 
 Each `logfn` attribute injects a single logging code. You can put as many `logfn` as you want.
 
-```
+```rust
 # use logfn::logfn;
 # use std::num::ParseIntError;
 #[logfn(Pre, Debug, "\"atoi\" will be executed")]
@@ -25,11 +25,11 @@ fn atoi(a: &str) -> Result<usize, ParseIntError> {
 
 The detail is documented below.
 
-# Pre logging
+## Pre logging
 
 The following attribute injects logging code **before** function is called.
 
-```
+```rust
 use logfn::logfn;
 
 #[logfn(Pre, Info, "executing \"add\" function...")]
@@ -40,7 +40,7 @@ fn add(a: usize, b: usize) -> usize {
 
 The resulting code will looks like
 
-```
+```rust
 fn add(a: usize, b: usize) -> usize {
     log::info!("executing \"add\" function...");
 
@@ -50,11 +50,11 @@ fn add(a: usize, b: usize) -> usize {
 }
 ```
 
-# Post logging
+## Post logging
 
 You also be able to inject logging code **after** function is called.
 
-```
+```rust
 use logfn::logfn;
 
 #[logfn(Post, Info, "executed \"add\" function!")]
@@ -65,7 +65,7 @@ fn add(a: usize, b: usize) -> usize {
 
 The resulting code will looks like
 
-```
+```rust
 fn add(a: usize, b: usize) -> usize {
     let res = (move || {
         a + b
@@ -77,7 +77,7 @@ fn add(a: usize, b: usize) -> usize {
 }
 ```
 
-# Conditional logging
+## Conditional logging
 
 You can configure the condition on which logging code is fired.
 To do that, please add `if` argument with a path to the function which takes reference to
@@ -86,7 +86,7 @@ returned value and returns `true` when you want to fire the logging code.
 ## Note
 Conditional logging is only supported in post logging for now.
 
-```
+```rust
 use logfn::logfn;
 
 #[logfn(Post, Warn, "checked add is failed!!", if = "Option::is_none")]
@@ -95,11 +95,11 @@ fn checked_add(a: usize, b: usize) -> Option<usize> {
 }
 ```
 
-# Log message
+## Log message
 
 You can put a single "{:?}" formatter on post logging. Returned value will be injected.
 
-```
+```rust
 # use std::num::ParseIntError;
 use logfn::logfn;
 
@@ -109,11 +109,11 @@ fn atoi(s: &str) -> Result<usize, ParseIntError> {
 }
 ```
 
-# Async function
+## Async function
 
 Async function is also supported.
 
-```
+```rust
 use logfn::logfn;
 
 #[logfn(Post, Debug, "\"add_fut\" is executed")]
