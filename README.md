@@ -3,6 +3,8 @@ logfn
 
 This crate provides the `logfn` attribute macro for inserting logging code into your function.
 
+This is heavily inspired by [elichai's `log-derive`](https://github.com/elichai/log-derive) crate.
+
 Currently we support 2 types of logging.
 
 - Pre logging
