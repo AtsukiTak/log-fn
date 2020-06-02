@@ -8,7 +8,7 @@ Currently we support 2 types of logging.
 - Pre logging
 - Post logging
 
-And we have a plan to add `Time logging` type.
+And we have a plan to add `Time logging` and `Count logging` type.
 
 Each `logfn` attribute injects a single logging code. You can put as many `logfn` as you want.
 

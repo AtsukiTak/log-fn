@@ -5,7 +5,7 @@
 //! - Pre logging
 //! - Post logging
 //!
-//! And we have a plan to add `Time logging` type.
+//! And we have a plan to add `Time logging` and `Cound logging` type.
 //!
 //! Each `logfn` attribute injects a single logging code. You can put as many `logfn` as you want.
 //!
